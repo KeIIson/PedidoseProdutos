@@ -28,7 +28,6 @@ def home():
 def get_produtos():
     return jsonify(PRODUCTS), 200
 
-
 # Endpoint da API de Pedidos
 @app.route("/pedidos", methods=["POST"])
 def create_pedido():
@@ -42,4 +41,19 @@ def create_pedido():
         "quantidade": data["quantidade"],
         "status": "CRIADO"
     }
-    
+
+# Envia o pedido para a fila SQS
+    try:
+        response = sqs.send_message(
+            QueueUrl=SQS_QUEUE_URL,
+            MessageBody=json.dumps(pedido)
+        )
+        return jsonify({
+            "mensagem": "Pedido criado e enviado para a fila!",
+            "message_id": response.get("MessageId")
+        }), 201
+    except Exception as e:
+        return jsonify({"erro": f"Falha ao enviar para o SQS: {str(e)}"}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
